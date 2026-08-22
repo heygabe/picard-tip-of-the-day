@@ -17,6 +17,6 @@ full page display should show only one tip per day updating at midnight. The tip
 
 the app should be styled as if it's simply a single page display of each posting. 
 
-![Screenshot from 2026-08-21 19-37-04.png](/home/gabe/.config/marktext/images/611c0c6a74696dd801a5b3c6bea28defde020722.png)
+![Screenshot from 2026-08-21 19-37-04.png](/home/gabe/.config/marktext/images/1cdea0e62952264b69928b29dec5816322589428.png)
 
 T
