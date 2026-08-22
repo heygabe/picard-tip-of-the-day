@@ -1,7 +1,23 @@
 // script.js – fetch a daily Picard tip and display it
 (async () => {
-  const TIP_ACCOUNT = "PicardTips@mas.to"; // mastodon acct identifier
-  const API_URL = "https://fe.disroot.org/api/v1/timelines/public?limit=200";
+  const TIP_ACCOUNT = "PicardTips@mas.to"; // Mastodon account identifier
+  const SEARCH_URL = "https://fe.disroot.org/api/v2/search?q=" + encodeURIComponent(TIP_ACCOUNT);
+
+  async function fetchAccountId() {
+    const resp = await fetch(SEARCH_URL, { mode: "cors" });
+    if (!resp.ok) throw new Error(`Search request failed ${resp.status}`);
+    const data = await resp.json();
+    const acct = data.accounts.find(a => a.acct && a.acct.toLowerCase() === TIP_ACCOUNT.toLowerCase());
+    if (!acct) throw new Error("Account not found in search results");
+    return acct.id;
+  }
+
+  async function fetchTips(accountId) {
+    const url = `https://fe.disroot.org/api/v1/accounts/${accountId}/statuses?limit=200`;
+    const resp = await fetch(url, { mode: "cors" });
+    if (!resp.ok) throw new Error(`Statuses request failed ${resp.status}`);
+    return await resp.json();
+  }
 
   function stripHtml(html) {
     const tmp = document.createElement("div");
@@ -10,21 +26,16 @@
   }
 
   try {
-    const resp = await fetch(API_URL, { mode: "cors" });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const allStatuses = await resp.json();
-    const picardTips = allStatuses.filter(
-      (s) => s.account && s.account.acct && s.account.acct.toLowerCase() === TIP_ACCOUNT.toLowerCase()
-    );
-    if (!picardTips.length) {
+    const accountId = await fetchAccountId();
+    const allStatuses = await fetchTips(accountId);
+    if (!allStatuses.length) {
       document.getElementById("tip").innerHTML = "<p>No tips found.</p>";
       return;
     }
-    // Choose tip based on current day, deterministic but varying daily
     const today = new Date();
     const dayCount = Math.floor(today.getTime() / (1000 * 60 * 60 * 24));
-    const idx = dayCount % picardTips.length;
-    const tipStatus = picardTips[idx];
+    const idx = dayCount % allStatuses.length;
+    const tipStatus = allStatuses[idx];
     const tipText = stripHtml(tipStatus.content);
     document.getElementById("tip").innerHTML = `<p>${tipText}</p>`;
   } catch (e) {
