@@ -1,33 +1,33 @@
 // script.js – fetch a daily Picard tip and display it
 (async () => {
-  const TIP_ACCOUNT = "PicardTips@mas.to"; // Mastodon account identifier
+  const TIP_ACCOUNT = "PicardTips@mas.to";
   const LOOKUP_URL = "https://mas.to/api/v1/accounts/lookup?acct=" + encodeURIComponent(TIP_ACCOUNT);
 
-  async function fetchAccountId() {
-    console.log("Fetching account ID from", LOOKUP_URL);
+  async function fetchAccount() {
+    console.log("Fetching account from", LOOKUP_URL);
     const resp = await fetch(LOOKUP_URL, { mode: "cors" });
     if (!resp.ok) {
       console.error("Lookup request failed", resp.status, resp.statusText);
-      throw new Error(`Lookup request failed ${resp.status}`);
+      throw new Error("Lookup request failed " + resp.status);
     }
     const acct = await resp.json();
     if (!acct.id) {
       console.error("Account ID not found in response", acct);
       throw new Error("Account ID not found");
     }
-    return acct.id;
+    return acct;
   }
 
   async function fetchTips(accountId) {
-    const url = `https://mas.to/api/v1/accounts/${accountId}/statuses?limit=200`;
+    const url = "https://mas.to/api/v1/accounts/" + accountId + "/statuses?limit=200";
     console.log("Fetching tips from", url);
     const resp = await fetch(url, { mode: "cors" });
     if (!resp.ok) {
       console.error("Statuses request failed", resp.status, resp.statusText);
-      throw new Error(`Statuses request failed ${resp.status}`);
+      throw new Error("Statuses request failed " + resp.status);
     }
     const data = await resp.json();
-    console.log(`Received ${data.length} statuses`);
+    console.log("Received " + data.length + " statuses");
     return data;
   }
 
@@ -38,8 +38,23 @@
   }
 
   try {
-    const accountId = await fetchAccountId();
-    const allStatuses = await fetchTips(accountId);
+    const account = await fetchAccount();
+
+    // Populate header with account info
+    const avatarEl = document.getElementById("avatar");
+    if (account.avatar) {
+      avatarEl.src = account.avatar;
+    }
+    const nameEl = document.getElementById("display-name");
+    if (account.display_name) {
+      nameEl.textContent = account.display_name;
+    }
+    const handleEl = document.getElementById("handle");
+    if (account.acct) {
+      handleEl.textContent = "@" + account.acct;
+    }
+
+    const allStatuses = await fetchTips(account.id);
     if (!allStatuses.length) {
       document.getElementById("tip").innerHTML = "<p>No tips found.</p>";
       return;
@@ -49,7 +64,7 @@
     const idx = dayCount % allStatuses.length;
     const tipStatus = allStatuses[idx];
     const tipText = stripHtml(tipStatus.content);
-    document.getElementById("tip").innerHTML = `<p>${tipText}</p>`;
+    document.getElementById("tip").innerHTML = "<p>" + tipText + "</p>";
   } catch (e) {
     console.error("Error loading tip:", e);
     document.getElementById("tip").innerHTML = "<p>Failed to load tip.</p>";
