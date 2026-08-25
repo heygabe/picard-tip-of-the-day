@@ -61,10 +61,28 @@
     }
     const today = new Date();
     const dayCount = Math.floor(today.getTime() / (1000 * 60 * 60 * 24));
-    const idx = dayCount % allStatuses.length;
-    const tipStatus = allStatuses[idx];
-    const tipText = stripHtml(tipStatus.content);
-    document.getElementById("tip").innerHTML = "<p>" + tipText + "</p>";
+    const secretOffset = parseInt(sessionStorage.getItem("picardOffset") || "0", 10);
+    const idx = (dayCount + secretOffset) % allStatuses.length;
+
+    function showTip(i) {
+      const tipStatus = allStatuses[i];
+      const tipText = stripHtml(tipStatus.content);
+      document.getElementById("tip").innerHTML = "<p>" + tipText + "</p>";
+    }
+
+    showTip(idx);
+
+    // Secret: triple-click the tip to load a new one
+    const tipEl = document.getElementById("tip");
+    tipEl.addEventListener("click", function (e) {
+      if (e.detail === 3) {
+        const currentOffset = parseInt(sessionStorage.getItem("picardOffset") || "0", 10);
+        const newOffset = currentOffset + 1;
+        sessionStorage.setItem("picardOffset", String(newOffset));
+        const newIdx = (dayCount + newOffset) % allStatuses.length;
+        showTip(newIdx);
+      }
+    });
   } catch (e) {
     console.error("Error loading tip:", e);
     document.getElementById("tip").innerHTML = "<p>Failed to load tip.</p>";
