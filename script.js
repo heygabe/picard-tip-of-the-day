@@ -37,6 +37,27 @@
     return tmp.textContent || tmp.innerText || "";
   }
 
+  function mulberry32(seed) {
+    return function () {
+      let t = (seed += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function shuffle(array, seed = 1701) {
+    const rng = mulberry32(seed);
+    const result = [...array];
+    // Sort deterministically by status ID first to ensure stability
+    result.sort((a, b) => (a.id > b.id ? 1 : a.id < b.id ? -1 : 0));
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  }
+
   try {
     const account = await fetchAccount();
 
@@ -59,13 +80,17 @@
       document.getElementById("tip").innerHTML = "<p>No tips found.</p>";
       return;
     }
+
+    // Deterministically shuffle statuses (seeded with Enterprise-D registry NCC-1701)
+    const tips = shuffle(allStatuses, 1701);
+
     const today = new Date();
     const dayCount = Math.floor(today.getTime() / (1000 * 60 * 60 * 24));
     const secretOffset = parseInt(sessionStorage.getItem("picardOffset") || "0", 10);
-    const idx = (dayCount + secretOffset) % allStatuses.length;
+    const idx = (dayCount + secretOffset) % tips.length;
 
     function showTip(i) {
-      const tipStatus = allStatuses[i];
+      const tipStatus = tips[i];
       const tipText = stripHtml(tipStatus.content);
       document.getElementById("tip").innerHTML = "<p>" + tipText + "</p>";
     }
@@ -79,7 +104,7 @@
         const currentOffset = parseInt(sessionStorage.getItem("picardOffset") || "0", 10);
         const newOffset = currentOffset + 1;
         sessionStorage.setItem("picardOffset", String(newOffset));
-        const newIdx = (dayCount + newOffset) % allStatuses.length;
+        const newIdx = (dayCount + newOffset) % tips.length;
         showTip(newIdx);
       }
     });
